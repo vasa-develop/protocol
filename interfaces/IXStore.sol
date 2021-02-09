@@ -21,7 +21,7 @@ interface IXStore {
 
     struct Vault {
         address xTokenAddress;
-        address assetAddress;
+        address nftAddress;
         address manager;
         IXToken xToken;
         IERC721 nft;
@@ -30,6 +30,7 @@ interface IXStore {
         mapping(uint256 => address) requester;
         mapping(uint256 => bool) isEligible;
         mapping(uint256 => bool) shouldReserve;
+        bool allowMintRequests;
         bool flipEligOnRedeem;
         bool negateEligibility;
         bool isFinalized;
@@ -54,7 +55,7 @@ interface IXStore {
 
     function xTokenAddress(uint256 vaultId) external view returns (address);
 
-    function assetAddress(uint256 vaultId) external view returns (address);
+    function nftAddress(uint256 vaultId) external view returns (address);
 
     function manager(uint256 vaultId) external view returns (address);
 
@@ -100,6 +101,8 @@ interface IXStore {
         external
         view
         returns (bool);
+
+    function allowMintRequests(uint256 vaultId) external view returns (bool);
 
     function flipEligOnRedeem(uint256 vaultId) external view returns (bool);
 
@@ -167,6 +170,8 @@ interface IXStore {
         uint256 id,
         bool _shouldReserve
     ) external;
+
+    function setAllowMintRequests(uint256 vaultId, bool isAllowed) external;
 
     function setFlipEligOnRedeem(uint256 vaultId, bool flipElig) external;
 

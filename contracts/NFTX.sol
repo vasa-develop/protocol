@@ -15,20 +15,24 @@ contract NFTX is Pausable, ReentrancyGuard, ERC721Holder {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    event NewVault(uint256 vaultId, address sender);
+    event NewVault(uint256 indexed vaultId, address sender);
     event Mint(
-        uint256 vaultId,
+        uint256 indexed vaultId,
         uint256[] nftIds,
         uint256 d2Amount,
         address sender
     );
     event Redeem(
-        uint256 vaultId,
+        uint256 indexed vaultId,
         uint256[] nftIds,
         uint256 d2Amount,
         address sender
     );
-    event MintRequested(uint256 vaultId, uint256[] nftIds, address sender);
+    event MintRequested(
+        uint256 indexed vaultId,
+        uint256[] nftIds,
+        address sender
+    );
 
     IXStore public store;
 
@@ -52,8 +56,8 @@ contract NFTX is Pausable, ReentrancyGuard, ERC721Holder {
 
     function isEligible(uint256 vaultId, uint256 nftId)
         public
-        virtual
         view
+        virtual
         returns (bool)
     {
         return
@@ -62,7 +66,7 @@ contract NFTX is Pausable, ReentrancyGuard, ERC721Holder {
                 : store.isEligible(vaultId, nftId);
     }
 
-    function vaultSize(uint256 vaultId) public virtual view returns (uint256) {
+    function vaultSize(uint256 vaultId) public view virtual returns (uint256) {
         return
             store.isD2Vault(vaultId)
                 ? store.d2Holdings(vaultId)
@@ -88,7 +92,7 @@ contract NFTX is Pausable, ReentrancyGuard, ERC721Holder {
         uint256 ethBase,
         uint256 ethStep,
         bool isD2
-    ) internal virtual pure returns (uint256) {
+    ) internal pure virtual returns (uint256) {
         if (amount == 0) {
             return 0;
         } else if (isD2) {
@@ -104,14 +108,15 @@ contract NFTX is Pausable, ReentrancyGuard, ERC721Holder {
         uint256 vaultId,
         uint256 numTokens,
         bool isBurn
-    ) public virtual view returns (uint256) {
+    ) public view virtual returns (uint256) {
         (, uint256 length) = store.supplierBounty(vaultId);
         if (length == 0) return 0;
         uint256 ethBounty = 0;
         for (uint256 i = 0; i < numTokens; i = i.add(1)) {
-            uint256 _vaultSize = isBurn
-                ? vaultSize(vaultId).sub(i.add(1))
-                : vaultSize(vaultId).add(i);
+            uint256 _vaultSize =
+                isBurn
+                    ? vaultSize(vaultId).sub(i.add(1))
+                    : vaultSize(vaultId).add(i);
             uint256 _ethBounty = _calcBountyHelper(vaultId, _vaultSize);
             ethBounty = ethBounty.add(_ethBounty);
         }
@@ -122,15 +127,16 @@ contract NFTX is Pausable, ReentrancyGuard, ERC721Holder {
         uint256 vaultId,
         uint256 amount,
         bool isBurn
-    ) public virtual view returns (uint256) {
+    ) public view virtual returns (uint256) {
         (uint256 ethMax, uint256 length) = store.supplierBounty(vaultId);
         if (length == 0) return 0;
         uint256 prevSize = vaultSize(vaultId);
         uint256 prevDepth = prevSize > length ? 0 : length.sub(prevSize);
         uint256 prevReward = _calcBountyD2Helper(ethMax, length, prevSize);
-        uint256 newSize = isBurn
-            ? vaultSize(vaultId).sub(amount)
-            : vaultSize(vaultId).add(amount);
+        uint256 newSize =
+            isBurn
+                ? vaultSize(vaultId).sub(amount)
+                : vaultSize(vaultId).add(amount);
         uint256 newDepth = newSize > length ? 0 : length.sub(newSize);
         uint256 newReward = _calcBountyD2Helper(ethMax, length, newSize);
         uint256 prevTriangle = prevDepth.mul(prevReward).div(2).div(10**18);
@@ -152,8 +158,8 @@ contract NFTX is Pausable, ReentrancyGuard, ERC721Holder {
 
     function _calcBountyHelper(uint256 vaultId, uint256 _vaultSize)
         internal
-        virtual
         view
+        virtual
         returns (uint256)
     {
         (uint256 ethMax, uint256 length) = store.supplierBounty(vaultId);
@@ -188,7 +194,7 @@ contract NFTX is Pausable, ReentrancyGuard, ERC721Holder {
         return vaultId;
     }
 
-    function depositETH(uint256 vaultId) public virtual payable {
+    function depositETH(uint256 vaultId) public payable virtual {
         store.setEthBalance(vaultId, store.ethBalance(vaultId).add(msg.value));
     }
 
@@ -222,11 +228,12 @@ contract NFTX is Pausable, ReentrancyGuard, ERC721Holder {
 
     function requestMint(uint256 vaultId, uint256[] memory nftIds)
         public
-        virtual
         payable
+        virtual
         nonReentrant
     {
         onlyOwnerIfPaused(1);
+        require(store.allowMintRequests(vaultId), "Not allowed");
         // TODO: implement bounty + fees
         for (uint256 i = 0; i < nftIds.length; i = i.add(1)) {
             require(
@@ -398,19 +405,16 @@ contract NFTX is Pausable, ReentrancyGuard, ERC721Holder {
         uint256 vaultId,
         uint256[] memory nftIds,
         uint256 d2Amount
-    ) public virtual payable nonReentrant {
+    ) public payable virtual nonReentrant {
         onlyOwnerIfPaused(1);
         uint256 amount = store.isD2Vault(vaultId) ? d2Amount : nftIds.length;
-        uint256 ethBounty = store.isD2Vault(vaultId)
-            ? _calcBountyD2(vaultId, d2Amount, false)
-            : _calcBounty(vaultId, amount, false);
-        (uint256 ethBase, uint256 ethStep) = store.mintFees(vaultId);
-        uint256 ethFee = _calcFee(
-            amount,
-            ethBase,
-            ethStep,
+        uint256 ethBounty =
             store.isD2Vault(vaultId)
-        );
+                ? _calcBountyD2(vaultId, d2Amount, false)
+                : _calcBounty(vaultId, amount, false);
+        (uint256 ethBase, uint256 ethStep) = store.mintFees(vaultId);
+        uint256 ethFee =
+            _calcFee(amount, ethBase, ethStep, store.isD2Vault(vaultId));
         if (ethFee > ethBounty) {
             _receiveEthToVault(vaultId, ethFee.sub(ethBounty), msg.value);
         }
@@ -427,22 +431,19 @@ contract NFTX is Pausable, ReentrancyGuard, ERC721Holder {
 
     function redeem(uint256 vaultId, uint256 amount)
         public
-        virtual
         payable
+        virtual
         nonReentrant
     {
         onlyOwnerIfPaused(2);
         if (!store.isClosed(vaultId)) {
-            uint256 ethBounty = store.isD2Vault(vaultId)
-                ? _calcBountyD2(vaultId, amount, true)
-                : _calcBounty(vaultId, amount, true);
-            (uint256 ethBase, uint256 ethStep) = store.burnFees(vaultId);
-            uint256 ethFee = _calcFee(
-                amount,
-                ethBase,
-                ethStep,
+            uint256 ethBounty =
                 store.isD2Vault(vaultId)
-            );
+                    ? _calcBountyD2(vaultId, amount, true)
+                    : _calcBounty(vaultId, amount, true);
+            (uint256 ethBase, uint256 ethStep) = store.burnFees(vaultId);
+            uint256 ethFee =
+                _calcFee(amount, ethBase, ethStep, store.isD2Vault(vaultId));
             if (ethBounty.add(ethFee) > 0) {
                 _receiveEthToVault(vaultId, ethBounty.add(ethFee), msg.value);
             }
@@ -486,6 +487,14 @@ contract NFTX is Pausable, ReentrancyGuard, ERC721Holder {
         for (uint256 i = 0; i < nftIds.length; i = i.add(1)) {
             store.setIsEligible(vaultId, nftIds[i], _boolean);
         }
+    }
+
+    function setAllowMintRequests(uint256 vaultId, bool isAllowed)
+        public
+        virtual
+    {
+        onlyPrivileged(vaultId);
+        store.setAllowMintRequests(vaultId, isAllowed);
     }
 
     function setFlipEligOnRedeem(uint256 vaultId, bool flipElig)
@@ -571,12 +580,16 @@ contract NFTX is Pausable, ReentrancyGuard, ERC721Holder {
 
     function finalizeVault(uint256 vaultId) public virtual {
         onlyPrivileged(vaultId);
-        require(!store.isFinalized(vaultId), "Already finalized");
-        store.setIsFinalized(vaultId, true);
+        if (!store.isFinalized(vaultId)) {
+            store.setIsFinalized(vaultId, true);
+        }
     }
 
     function closeVault(uint256 vaultId) public virtual {
         onlyPrivileged(vaultId);
+        if (!store.isFinalized(vaultId)) {
+            store.setIsFinalized(vaultId, true);
+        }
         store.setIsClosed(vaultId, true);
     }
 
