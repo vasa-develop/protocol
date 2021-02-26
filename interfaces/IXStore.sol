@@ -153,23 +153,13 @@ interface IXStore {
 
     function reservesRemove(uint256 vaultId, uint256 elem) external;
 
-    function setRequester(
-        uint256 vaultId,
-        uint256 id,
-        address _requester
-    ) external;
+    function setRequester(uint256 vaultId, uint256 id, address _requester)
+        external;
 
-    function setIsEligible(
-        uint256 vaultId,
-        uint256 id,
-        bool _bool
-    ) external;
+    function setIsEligible(uint256 vaultId, uint256 id, bool _bool) external;
 
-    function setShouldReserve(
-        uint256 vaultId,
-        uint256 id,
-        bool _shouldReserve
-    ) external;
+    function setShouldReserve(uint256 vaultId, uint256 id, bool _shouldReserve)
+        external;
 
     function setAllowMintRequests(uint256 vaultId, bool isAllowed) external;
 
@@ -181,29 +171,17 @@ interface IXStore {
 
     function setIsClosed(uint256 vaultId, bool _isClosed) external;
 
-    function setMintFees(
-        uint256 vaultId,
-        uint256 ethBase,
-        uint256 ethStep
-    ) external;
+    function setMintFees(uint256 vaultId, uint256 ethBase, uint256 ethStep)
+        external;
 
-    function setBurnFees(
-        uint256 vaultId,
-        uint256 ethBase,
-        uint256 ethStep
-    ) external;
+    function setBurnFees(uint256 vaultId, uint256 ethBase, uint256 ethStep)
+        external;
 
-    function setDualFees(
-        uint256 vaultId,
-        uint256 ethBase,
-        uint256 ethStep
-    ) external;
+    function setDualFees(uint256 vaultId, uint256 ethBase, uint256 ethStep)
+        external;
 
-    function setSupplierBounty(
-        uint256 vaultId,
-        uint256 ethMax,
-        uint256 length
-    ) external;
+    function setSupplierBounty(uint256 vaultId, uint256 ethMax, uint256 length)
+        external;
 
     function setEthBalance(uint256 vaultId, uint256 _ethBalance) external;
 
